@@ -1,1 +1,1 @@
-# Golang app
+# Golang and Sqlite pair

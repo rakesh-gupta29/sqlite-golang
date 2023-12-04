@@ -9,4 +9,7 @@ func MountAPIRoutes(app *fiber.App) {
 	route := app.Group("/api/v1")
 	route.Get("/healthcheck", handlers.HealthCheck)
 
+	route.Get("/admin/all", handlers.GetAllSubmissions)
+	route.Post("/submit", handlers.Submit)
+
 }
