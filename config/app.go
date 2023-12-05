@@ -3,14 +3,16 @@ package config
 import (
 	"os"
 	"strconv"
+	"strings"
 	"time"
 )
 
 type Config struct {
-	Host        string
-	Port        string
-	DebugMode   bool
-	ReadTimeout time.Duration
+	Host           string
+	Port           string
+	DebugMode      bool
+	ReadTimeout    time.Duration
+	AllowedDomains []string
 }
 
 var AppConfig Config
@@ -22,6 +24,10 @@ func loadAppConfig() {
 	}
 
 	AppConfig.Port = os.Getenv("PORT")
+	if AppConfig.Port == "" {
+		AppConfig.Port = "3000"
+	}
+	AppConfig.AllowedDomains = strings.Split(os.Getenv("ALLOWED_DOMAINS"), ",")
 	if AppConfig.Port == "" {
 		AppConfig.Port = "3000"
 	}
