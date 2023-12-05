@@ -6,6 +6,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/rakesh-gupta29/sqlite-golang/app/database"
 	"github.com/rakesh-gupta29/sqlite-golang/app/models"
+	"github.com/rakesh-gupta29/sqlite-golang/pkg/validator"
 )
 
 func HealthCheck(c *fiber.Ctx) error {
@@ -13,13 +14,11 @@ func HealthCheck(c *fiber.Ctx) error {
 }
 
 func SeedData() error {
-	// Example seed data
 	seedData := []models.Form{
 		{ID: 1, Name: "John Doe", Email: "john@example.com", Message: "Hello, World!"},
 		{ID: 2, Name: "Jane Doe", Email: "jane@example.com", Message: "Greetings from Jane!"},
 	}
 
-	// Insert seed data into the database
 	for _, data := range seedData {
 		_, err := database.Database.Exec(`
 			INSERT INTO forms (name, email, message) VALUES (?, ?, ?);
@@ -45,7 +44,6 @@ func getAllData() (string, error) {
 }
 
 func formsToJSON(forms []models.Form) (string, error) {
-	// Convert forms slice to JSON
 	jsonData, err := json.Marshal(forms)
 	if err != nil {
 		return "", err
@@ -63,7 +61,6 @@ func GetAllForms() ([]models.Form, error) {
 
 	var forms []models.Form
 
-	// Iterate through the rows and scan into Form struct
 	for rows.Next() {
 		var form models.Form
 		if err := rows.Scan(&form.ID, &form.Name, &form.Email, &form.Message); err != nil {
@@ -85,30 +82,48 @@ func GetAllSubmissions(c *fiber.Ctx) error {
 }
 
 func Submit(c *fiber.Ctx) error {
-	var form models.Form
+	name := c.FormValue("name")
+	email := c.FormValue("email")
+	message := c.FormValue("message")
 
-	if err := c.BodyParser(&form); err != nil {
-		return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{"error": "Invalid request body"})
+	validationErrors := fiber.Map{}
+
+	ok, msg := validator.String(name)
+	if !ok {
+		validationErrors["name"] = msg
 	}
 
-	// Insert the form data into the database
-	id, err := submitForm(form.Name, form.Email, form.Message)
-	if err != nil {
-		return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to submit form"})
+	ok, msg = validator.Email(email)
+	if !ok {
+		validationErrors["email"] = msg
 	}
 
-	form.ID = id
+	ok, msg = validator.Required(message, "message")
 
-	return c.JSON(form)
+	if !ok {
+		validationErrors["message"] = msg
+	}
+	if len(validationErrors) != 0 {
+		return c.Status(fiber.StatusBadRequest).JSON(validationErrors)
+	}
+
+	// _, err := submitForm(name, email, message)
+
+	// if err != nil {
+	// 	return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{"error": "Failed to submit form"})
+	// }
+
+	return c.Status(fiber.StatusOK).JSON(fiber.Map{"message": "submitted the form successfully"})
+
 }
 
-func submitForm(name, email, message string) (int64, error) {
-	result, err := database.Database.Exec(`
-		INSERT INTO forms (name, email, message) VALUES (?, ?, ?);
-	`, name, email, message)
-	if err != nil {
-		return 0, err
-	}
+// func submitForm(name, email, message string) (int64, error) {
+// 	result, err := database.Database.Exec(`
+// 		INSERT INTO forms (name, email, message) VALUES (?, ?, ?);
+// 	`, name, email, message)
+// 	if err != nil {
+// 		return 0, err
+// 	}
 
-	return result.LastInsertId()
-}
+// 	return result.LastInsertId()
+// }
